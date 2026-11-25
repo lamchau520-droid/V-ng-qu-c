@@ -1,0 +1,1115 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Vườn Câu Pixel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+/* Layout: full-screen canvas world; HUD top, joystick bottom-left, action bottom-right; menus as centred pixel cards. */
+:root{
+  --ink:#10241f; --panel:#1a382f; --line:#2f6b55; --gold:#f4c95d; --leaf:#8bd17c;
+  --water:#5ec2e8; --text:#f3ecd8; --berry:#e8647a; --shadow:#0a1712;
+  --px:"VT323","Courier New",monospace;
+  color-scheme: dark;
+}
+html,body{height:100%;margin:0;background:var(--ink);color:var(--text);overflow:hidden}
+body{font-family:var(--px);font-size:22px;line-height:1.1;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#app{position:fixed;inset:0;background:var(--ink)}
+#c{display:block;width:100%;height:100%;image-rendering:pixelated;touch-action:none}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:var(--panel);padding:6px 12px;
+  box-shadow:0 0 0 3px var(--line),0 6px 0 3px var(--shadow)}
+button:active{transform:translateY(3px);box-shadow:0 0 0 3px var(--line),0 3px 0 3px var(--shadow)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+#hud{position:absolute;left:0;right:0;top:0;pointer-events:none;
+  padding:calc(10px + env(safe-area-inset-top,0px)) 14px 0 14px;display:flex;flex-direction:column;gap:14px}
+#hud>*{pointer-events:auto}
+.top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pill{background:var(--panel);padding:4px 12px;box-shadow:0 0 0 3px var(--line);min-width:3ch}
+#coins{color:var(--gold)}
+#stock{font-size:19px;opacity:.9;flex:1 1 100%;text-shadow:2px 2px 0 var(--shadow)}
+.tools{display:flex;gap:10px}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;min-width:58px;position:relative}
+.tool canvas{width:32px;height:32px;image-rendering:pixelated}
+.tool span{font-size:17px}
+.tool.on{background:#2b5a46;box-shadow:0 0 0 3px var(--gold),0 6px 0 3px var(--shadow)}
+.tool b{position:absolute;right:2px;top:0;font-size:17px;color:var(--gold);font-weight:400}
+#joy{position:absolute;left:calc(22px + env(safe-area-inset-left,0px));bottom:calc(26px + env(safe-area-inset-bottom,0px));
+  width:124px;height:124px;border-radius:50%;background:rgba(16,36,31,.45);box-shadow:0 0 0 3px var(--line);touch-action:none}
+#knob{position:absolute;left:38px;top:38px;width:48px;height:48px;border-radius:50%;background:var(--leaf);box-shadow:0 0 0 3px var(--shadow)}
+#act{position:absolute;right:calc(26px + env(safe-area-inset-right,0px));bottom:calc(40px + env(safe-area-inset-bottom,0px));
+  width:92px;height:92px;border-radius:50%;font-size:40px;background:var(--berry);touch-action:none}
+#feed{position:absolute;left:14px;bottom:calc(160px + env(safe-area-inset-bottom,0px));max-width:62%;pointer-events:none;display:flex;flex-direction:column;gap:2px;font-size:20px;text-shadow:2px 2px 0 var(--shadow)}
+#chat{position:absolute;left:0;right:0;bottom:0;z-index:6;background:rgba(10,23,18,.92);padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -3px 0 var(--line)}
+#chatLog{max-height:30vh;overflow:auto;font-size:20px;margin-bottom:8px}
+.crow{display:flex;gap:8px}.crow input{flex:1;min-width:0}
+#toast{position:absolute;z-index:5;left:50%;top:38%;transform:translateX(-50%);max-width:82%;text-align:center;
+  background:var(--shadow);padding:6px 14px;box-shadow:0 0 0 3px var(--line);opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+#fishUI{position:absolute;left:50%;bottom:calc(170px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(78%,360px);text-align:center;
+  background:var(--panel);padding:12px 14px;box-shadow:0 0 0 3px var(--line)}
+.bar{position:relative;height:26px;background:var(--shadow);box-shadow:inset 0 0 0 3px var(--line)}
+#zone{position:absolute;top:3px;bottom:3px;background:#fff}
+#mark{position:absolute;top:0;bottom:0;width:6px;background:var(--gold);box-shadow:0 0 0 2px var(--shadow)}
+#fishUI p{margin:10px 0 0;font-size:19px}
+#dlg{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(166px + env(safe-area-inset-bottom,0px));width:min(92%,420px);box-sizing:border-box;
+  background:var(--panel);padding:12px 16px;box-shadow:0 0 0 4px var(--gold),0 8px 0 4px var(--shadow)}
+#dlg b{color:var(--gold);font-weight:400;font-size:26px}
+#dlg p{margin:6px 0 8px;font-size:24px;line-height:1.15}
+#dlg small{opacity:.7;font-size:18px}
+.screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));background:rgba(10,23,18,.55);overflow:auto}
+.card{width:min(100%,400px);background:var(--panel);padding:20px;box-shadow:0 0 0 4px var(--line),0 8px 0 4px var(--shadow);display:flex;flex-direction:column;gap:12px}
+h1{margin:0;font-size:46px;font-weight:400;color:var(--gold);text-shadow:3px 3px 0 var(--shadow);text-wrap:balance}
+h2,h3{margin:0;font-weight:400}h2{font-size:34px;color:var(--gold)}h3{font-size:24px;color:var(--leaf)}
+.sub{margin:0;opacity:.85}
+.chars{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:6px 0}
+.char{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px}
+.char canvas{width:100px;height:120px;image-rendering:pixelated}
+.char.sel{background:#2b5a46;box-shadow:0 0 0 4px var(--gold),0 6px 0 4px var(--shadow)}
+label{font-size:20px}
+input{font:inherit;color:var(--text);background:var(--shadow);border:0;padding:8px 10px;box-shadow:inset 0 0 0 3px var(--line);width:100%;box-sizing:border-box}
+.go{font-size:28px;background:var(--leaf);color:var(--shadow);padding:8px}
+.go.alt{background:var(--panel);color:var(--text)}
+.shead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 0}
+.row span{min-width:0}.row button{padding:3px 10px;flex:none}
+.coinline{color:var(--gold)}
+#shop .card{max-height:100%;overflow:auto}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+<div id="app">
+  <canvas id="c"></canvas>
+  <div id="hud" hidden>
+    <div class="top"><div class="pill" id="coins">30</div><div class="pill" id="clock">06:00</div><button class="pill" id="bagBtn">Túi đồ</button><button class="pill" id="chatBtn">Chat</button><div class="pill" id="online" hidden></div><div id="stock"></div></div>
+    <div class="tools" id="tools"></div>
+  </div>
+  <div id="joy" hidden><div id="knob"></div></div>
+  <button id="act" hidden aria-label="Hành động">A</button>
+  <div id="feed"></div>
+  <div id="toast"></div>
+  <div id="fishUI" hidden><div class="bar"><div id="zone"></div><div id="mark"></div></div><div class="bar" style="height:12px;margin-top:8px"><div id="prog" style="position:absolute;left:0;top:3px;bottom:3px;width:35%;background:var(--water)"></div></div><p>Giữ nút A để thanh trắng sang phải, thả ra để sang trái. Giữ cá trong thanh!</p></div>
+  <div id="dlg" hidden><b id="dlgName"></b><p id="dlgText"></p><small id="dlgHint"></small></div>
+  <section id="menu" class="screen">
+    <div class="card">
+      <h1>Vườn Câu Pixel</h1>
+      <p class="sub">Trồng cây, câu cá, bán nông sản và làm giàu cho khu vườn.</p>
+      <div class="chars">
+        <button class="char sel" data-g="boy" aria-pressed="true"><canvas id="pvBoy" width="20" height="24"></canvas><span>Nam</span></button>
+        <button class="char" data-g="girl" aria-pressed="false"><canvas id="pvGirl" width="20" height="24"></canvas><span>Nữ</span></button>
+      </div>
+      <label for="nm">Tên nhân vật</label>
+      <input id="nm" maxlength="12" placeholder="Nông dân" autocomplete="off">
+      <button class="go" id="go">Bắt đầu</button>
+      <button class="go alt" id="cont" hidden>Tiếp tục</button>
+    </div>
+  </section>
+  <div id="chat" hidden>
+    <div id="chatLog"></div>
+    <div class="crow"><input id="chatIn" placeholder="Nhập tin nhắn hoặc /lệnh" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="120"><button id="chatGo">Gửi</button><button id="chatX">Đóng</button></div>
+  </div>
+  <section id="adm" class="screen" hidden>
+    <div class="card">
+      <div class="shead"><h2>Admin</h2><button id="admX">Đóng</button></div>
+      <input id="admIn" placeholder="Gõ lệnh, ví dụ: xu 500" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="go" id="admGo">Chạy</button>
+      <div id="admOut" class="sub" style="white-space:pre-wrap;font-size:18px">Gõ help để xem danh sách lệnh.</div>
+    </div>
+  </section>
+  <section id="mshop" class="screen" hidden>
+    <div class="card">
+      <div class="shead"><h2>Thương nhân</h2><button id="mshopX">Đóng</button></div>
+      <div class="coinline">Xu: <b id="mshopCoins">0</b></div>
+      <div id="mList"></div>
+    </div>
+  </section>
+  <section id="bag" class="screen" hidden>
+    <div class="card">
+      <div class="shead"><h2>Túi đồ</h2><button id="bagX">Đóng</button></div>
+      <div class="coinline">Xu: <b id="bagCoins">0</b></div>
+      <div id="bagList"></div>
+    </div>
+  </section>
+  <section id="shop" class="screen" hidden>
+    <div class="card">
+      <div class="shead"><h2>Cửa hàng</h2><button id="shopX">Đóng</button></div>
+      <div class="coinline">Xu: <b id="shopCoins">0</b></div>
+      <h3>Mua hạt giống</h3><div id="buyList"></div>
+      <h3>Bán nông sản và cá</h3><div id="sellList"></div>
+      <button id="sellAll">Bán tất cả</button>
+    </div>
+  </section>
+</div>
+<script>
+"use strict";
+/* ===== Bản đồ + hình ảnh pixel ===== */
+const T = 16, W = 40, H = 32;
+const $ = id => document.getElementById(id);
+function rng32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R = rng32(7);
+// 0 cỏ, 1 nước, 2 cát, 3 cây, 4 đất trồng, 5 đường, 6 cầu gỗ, 7 nhà, 8 cửa hàng, 9 hàng rào, 10 cửa nhà, 11 cửa hàng(cửa)
+const map = new Uint8Array(W * H);
+const deco = new Uint8Array(W * H);
+const get = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 3 : map[y * W + x];
+const put = (x, y, v) => { if (x >= 0 && y >= 0 && x < W && y < H) map[y * W + x] = v; };
+const SOLID = new Set([1, 3, 7, 8, 9, 10, 11]);
+
+(function buildMap(){
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const dx = (x - 31) / 8.5, dy = (y - 20) / 7.5, d = dx * dx + dy * dy;
+    if (d < 1) put(x, y, 1); else if (d < 1.35) put(x, y, 2);
+  }
+  for (let y = 15; y <= 20; y++) for (let x = 6; x <= 15; x++) put(x, y, 4);
+  for (let x = 5; x <= 16; x++) { put(x, 14, 9); put(x, 21, 9); }
+  for (let y = 14; y <= 21; y++) { put(5, y, 9); put(16, y, 9); }
+  put(10, 14, 5); put(11, 14, 5);
+  for (let y = 4; y <= 7; y++) for (let x = 8; x <= 12; x++) put(x, y, 7);
+  put(10, 7, 10);
+  for (let y = 4; y <= 7; y++) for (let x = 19; x <= 24; x++) put(x, y, 8);
+  put(21, 7, 11);
+  for (let x = 10; x <= 22; x++) put(x, 8, 5);
+  for (let y = 9; y <= 13; y++) { put(10, y, 5); put(11, y, 5); }
+  for (let y = 9; y <= 20; y++) put(22, y, 5);
+  for (let x = 22; x <= 23; x++) put(x, 20, 5);
+  for (let x = 23; x <= 29; x++) put(x, 20, 6);
+  const keep = (x, y) => (x >= 4 && x <= 17 && y >= 13 && y <= 22) || (x >= 7 && x <= 26 && y >= 3 && y <= 9) ||
+    (x >= 20 && x <= 24 && y >= 8 && y <= 22) || (x >= 9 && x <= 12 && y >= 8 && y <= 14);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const border = x < 2 || y < 2 || x >= W - 2 || y >= H - 2;
+    if (border) { put(x, y, 3); continue; }
+    if (get(x, y) !== 0) continue;
+    const r = R();
+    if (r < 0.07 && !keep(x, y)) put(x, y, 3);
+    else if (r < 0.14) deco[y * W + x] = 1 + ((R() * 3) | 0);
+  }
+})();
+
+/* ===== Vẽ bản đồ tĩnh một lần ===== */
+const world = document.createElement("canvas");
+world.width = W * T; world.height = H * T;
+const wx = world.getContext("2d");
+function rect(c, col, x, y, w, h){ c.fillStyle = col; c.fillRect(x, y, w, h); }
+function drawTile(x, y, type){
+  const r = rng32(x * 131 + y * 17), X = x * T, Y = y * T;
+  const base = {0:"#6bbf59",1:"#3b8fd1",2:"#e3cf8e",3:"#6bbf59",4:"#8a5a3b",5:"#c9a66b",6:"#a0703c",7:"#6bbf59",8:"#6bbf59",9:"#6bbf59",10:"#6bbf59",11:"#6bbf59"}[type];
+  rect(wx, base, X, Y, T, T);
+  const speck = {0:"#5aaa4a",1:"#4aa0e0",2:"#d3be7c",3:"#5aaa4a",4:"#744a30",5:"#b5935a",6:"#8a5d2f"}[type] || "#5aaa4a";
+  for (let i = 0; i < 6; i++) rect(wx, speck, X + ((r() * 15) | 0), Y + ((r() * 15) | 0), 1 + ((r() * 2) | 0), 1);
+  if (type === 6) { for (let k = 0; k < 4; k++) rect(wx, "#7a5025", X, Y + k * 4 + 3, T, 1); rect(wx, "#7a5025", X, Y, T, 1); }
+  if (type === 4) { for (let k = 0; k < 2; k++) rect(wx, "#7a4e33", X + 1, Y + 4 + k * 7, T - 2, 1); }
+  if (type === 9) { rect(wx, "#7a5025", X + 1, Y + 5, 14, 2); rect(wx, "#7a5025", X + 1, Y + 10, 14, 2);
+    rect(wx, "#a0703c", X + 2, Y + 2, 3, 13); rect(wx, "#a0703c", X + 11, Y + 2, 3, 13); }
+  if (type === 3) {
+    rect(wx, "#6b4423", X + 6, Y + 9, 4, 6);
+    rect(wx, "#2f7d3c", X + 2, Y + 3, 12, 8); rect(wx, "#2f7d3c", X + 4, Y + 1, 8, 12);
+    rect(wx, "#47a152", X + 4, Y + 3, 5, 3); rect(wx, "#47a152", X + 6, Y + 2, 3, 1);
+  }
+  const d = deco[y * W + x];
+  if (d && type === 0) {
+    const col = ["", "#ff7aa8", "#fff27a", "#ffffff"][d];
+    rect(wx, col, X + 5, Y + 6, 2, 2); rect(wx, col, X + 11, Y + 10, 2, 2); rect(wx, "#3f8f3a", X + 6, Y + 8, 1, 2);
+  }
+}
+function drawBuildings(){
+  // nhà: x 8..12, y 4..7
+  const hx = 8 * T, hy = 4 * T;
+  rect(wx, "#f0dfb8", hx, hy + 2 * T, 5 * T, 2 * T);
+  rect(wx, "#c9b78e", hx, hy + 2 * T, 5 * T, 2);
+  rect(wx, "#b5413b", hx - 4, hy, 5 * T + 8, 2 * T + 2);
+  for (let k = 0; k < 6; k++) rect(wx, "#8e2f2b", hx - 4, hy + k * 6 + 4, 5 * T + 8, 1);
+  rect(wx, "#6b4423", 10 * T + 2, 7 * T - 4, 12, 20 - 4);
+  rect(wx, "#ffd166", 10 * T + 10, 7 * T + 4, 2, 2);
+  rect(wx, "#7ed3f0", hx + 6, hy + 2 * T + 8, 14, 12); rect(wx, "#6b4423", hx + 12, hy + 2 * T + 8, 2, 12);
+  rect(wx, "#7ed3f0", hx + 4 * T + 2, hy + 2 * T + 8, 14, 12); rect(wx, "#6b4423", hx + 4 * T + 8, hy + 2 * T + 8, 2, 12);
+  // cửa hàng: x 19..24, y 4..7
+  const sx = 19 * T, sy = 4 * T;
+  rect(wx, "#d9b27c", sx, sy + 2 * T, 6 * T, 2 * T);
+  rect(wx, "#2f8f83", sx - 4, sy, 6 * T + 8, 2 * T);
+  for (let k = 0; k < 12; k++) rect(wx, k % 2 ? "#f3ecd8" : "#2f8f83", sx - 4 + k * 8.33, sy + 2 * T - 8, 8.33, 8);
+  rect(wx, "#f4c95d", sx + 2 * T, sy + 6, 2 * T, 14); rect(wx, "#10241f", sx + 2 * T + 3, sy + 10, 26, 6);
+  rect(wx, "#f4c95d", sx + 2 * T + 5, sy + 11, 4, 4); rect(wx, "#f4c95d", sx + 2 * T + 12, sy + 11, 14, 1); rect(wx, "#f4c95d", sx + 2 * T + 12, sy + 14, 10, 1);
+  rect(wx, "#6b4423", 21 * T + 1, 7 * T - 4, 14, 20); rect(wx, "#7ed3f0", sx + 6, sy + 2 * T + 6, 16, 14); rect(wx, "#7ed3f0", sx + 5 * T - 6, sy + 2 * T + 6, 16, 14);
+  rect(wx, "#c0562b", sx + 3 * T - 2, sy + 3 * T + 4, 18, 8);
+}
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) drawTile(x, y, map[y * W + x]);
+drawBuildings();
+
+/* ===== Nhân vật pixel: nam / nữ ===== */
+function drawChar(c, x, y, g, dir, frame){
+  const skin = "#f1c27d", sk2 = "#d9a45e";
+  const step = frame ? ((frame >> 0) % 2 ? 1 : -1) : 0;
+  rect(c, "rgba(0,0,0,.25)", x - 5, y - 1, 10, 2);
+  if (g === "girl") {
+    rect(c, "#8e3b4f", x - 3 + step, y - 3, 3, 3); rect(c, "#8e3b4f", x + 1 - step, y - 3, 3, 3);
+    rect(c, "#e8647a", x - 5, y - 7, 10, 5); rect(c, "#f08c9e", x - 5, y - 7, 10, 1);
+  } else {
+    rect(c, "#2d4a8a", x - 3 + step, y - 4, 3, 4); rect(c, "#2d4a8a", x + 1 - step, y - 4, 3, 4);
+    rect(c, "#3d7be0", x - 4, y - 9, 8, 6); rect(c, "#5a95f0", x - 4, y - 9, 8, 1);
+  }
+  rect(c, skin, x - 6, y - 8, 2, 4); rect(c, skin, x + 4, y - 8, 2, 4);
+  rect(c, skin, x - 4, y - 16, 8, 8);
+  rect(c, sk2, x - 4, y - 9, 8, 1);
+  const hair = g === "girl" ? "#4a2a1c" : "#6b4423";
+  if (dir === "up") {
+    rect(c, hair, x - 5, y - 17, 10, 9);
+    if (g === "girl") rect(c, hair, x - 5, y - 9, 10, 4);
+  } else {
+    rect(c, hair, x - 5, y - 17, 10, 3); rect(c, hair, x - 5, y - 15, 2, 4); rect(c, hair, x + 3, y - 15, 2, 4);
+    if (g === "girl") { rect(c, hair, x - 5, y - 15, 2, 9); rect(c, hair, x + 3, y - 15, 2, 9); rect(c, "#ff7aa8", x + 2, y - 17, 3, 3); }
+    if (dir === "down") { rect(c, "#2a1a10", x - 3, y - 12, 1, 2); rect(c, "#2a1a10", x + 2, y - 12, 1, 2); }
+    else { const ex = dir === "left" ? x - 3 : x + 2; rect(c, "#2a1a10", ex, y - 12, 1, 2); }
+  }
+}
+/* ===== Bên trong nhà ===== */
+const HW = 11, HH = 9;
+// 0 sàn, 1 tường, 2 đồ nội thất, 5 cửa ra, 6 giường
+const hmap = new Uint8Array(HW * HH);
+let room = "home";
+const hget = (x, y) => (x < 0 || y < 0 || x >= HW || y >= HH) ? 1 : (room === "shop" ? smap : hmap)[y * HW + x];
+(function(){
+  for (let y = 0; y < HH; y++) for (let x = 0; x < HW; x++) hmap[y * HW + x] = (y < 2 || y === 8 || x === 0 || x === HW - 1) ? 1 : 0;
+  hmap[8 * HW + 5] = 5;
+  [[1, 2], [2, 2], [1, 3], [2, 3]].forEach(([x, y]) => hmap[y * HW + x] = 6);
+  [[7, 4], [8, 4], [9, 2], [9, 3], [9, 6], [1, 6]].forEach(([x, y]) => hmap[y * HW + x] = 2);
+})();
+const homeCv = document.createElement("canvas"); homeCv.width = HW * T; homeCv.height = HH * T;
+(function(){
+  const c = homeCv.getContext("2d");
+  for (let y = 0; y < HH; y++) for (let x = 0; x < HW; x++) {
+    const X = x * T, Y = y * T, t = hmap[y * HW + x];
+    if (t === 1) {
+      if (y < 2) { rect(c, "#e8d5b0", X, Y, T, T); if (y === 1) { rect(c, "#a0703c", X, Y + 6, T, 10); rect(c, "#7a5025", X, Y + 6, T, 1); } }
+      else if (y === 8) { rect(c, "#6b4423", X, Y, T, T); rect(c, "#7a5025", X, Y + 4, T, 1); }
+      else rect(c, "#b59f77", X, Y, T, T);
+    } else {
+      rect(c, (x + y) % 2 ? "#c89b62" : "#bf9259", X, Y, T, T);
+      rect(c, "#a87a46", X, Y + 15, T, 1); rect(c, "#a87a46", X + 7 + ((y * 3) % 4), Y, 1, T);
+    }
+  }
+  rect(c, "#c0562b", 5 * T + 1, 8 * T + 2, 14, 12); rect(c, "#f4c95d", 5 * T + 3, 8 * T + 4, 10, 1); rect(c, "#f4c95d", 5 * T + 3, 8 * T + 13, 10, 1);
+  [3, 8].forEach(x => { rect(c, "#6b4423", x * T + 1, 3, 14, 18); rect(c, "#7ed3f0", x * T + 3, 5, 10, 14); rect(c, "#6b4423", x * T + 7, 5, 2, 14); rect(c, "#6b4423", x * T + 3, 11, 10, 2); });
+  rect(c, "#f4c95d", 5 * T + 3, 6, 10, 9); rect(c, "#6bbf59", 5 * T + 5, 8, 6, 5); rect(c, "#7ed3f0", 5 * T + 5, 8, 6, 2);
+  rect(c, "#c0562b", 3 * T, 5 * T, 4 * T, 2 * T); rect(c, "#f4c95d", 3 * T + 2, 5 * T + 2, 4 * T - 4, 2 * T - 4); rect(c, "#c0562b", 3 * T + 4, 5 * T + 4, 4 * T - 8, 2 * T - 8);
+  rect(c, "#e8a33d", 3 * T + 8, 5 * T + 8, 4 * T - 16, 2 * T - 16);
+  // giường
+  let X = T, Y = 2 * T;
+  rect(c, "#a0703c", X, Y, 2 * T, 2 * T); rect(c, "#f3ecd8", X + 3, Y + 3, 10, 6); rect(c, "#f3ecd8", X + 19, Y + 3, 10, 6);
+  rect(c, "#e8647a", X + 2, Y + 12, 2 * T - 4, 18); rect(c, "#f08c9e", X + 2, Y + 16, 2 * T - 4, 2);
+  // bàn
+  X = 7 * T; Y = 4 * T;
+  rect(c, "#6b4423", X + 2, Y + 11, 2, 5); rect(c, "#6b4423", X + 28, Y + 11, 2, 5);
+  rect(c, "#a0703c", X, Y + 2, 2 * T, 10); rect(c, "#f3ecd8", X + 2, Y + 3, 2 * T - 4, 3);
+  rect(c, "#e8404f", X + 6, Y - 2, 5, 5); rect(c, "#3f9f45", X + 8, Y - 4, 1, 2); rect(c, "#5ec2e8", X + 20, Y - 1, 5, 4);
+  // kệ sách
+  X = 9 * T; Y = 2 * T;
+  rect(c, "#6b4423", X, Y, T, 2 * T); rect(c, "#a0703c", X, Y + 10, T, 2); rect(c, "#a0703c", X, Y + 21, T, 2);
+  ["#e8404f", "#3d7be0", "#f4c95d", "#8bd17c"].forEach((col, i) => { rect(c, col, X + 2 + i * 3, Y + 2, 2, 8); rect(c, col, X + 3 + i * 3, Y + 13, 2, 8); });
+  rect(c, "#8bd17c", X + 3, Y + 24, 4, 6); rect(c, "#f4c95d", X + 9, Y + 25, 4, 5);
+  // chậu cây
+  [[9, 6], [1, 6]].forEach(([x, y]) => { rect(c, "#c0562b", x * T + 4, y * T + 10, 8, 6); rect(c, "#3f9f45", x * T + 3, y * T + 2, 10, 8); rect(c, "#2f7d3c", x * T + 6, y * T + 4, 4, 6); });
+})();
+/* ===== Bên trong cửa hàng ===== */
+const smap = new Uint8Array(HW * HH);
+(function(){
+  for (let y = 0; y < HH; y++) for (let x = 0; x < HW; x++) smap[y * HW + x] = (y < 2 || y === 8 || x === 0 || x === HW - 1) ? 1 : 0;
+  smap[8 * HW + 5] = 5;
+  for (let x = 1; x <= 9; x++) smap[4 * HW + x] = 2;
+  [1, 2, 3, 7, 8, 9].forEach(x => smap[2 * HW + x] = 2);
+  [[1, 6], [9, 6]].forEach(([x, y]) => smap[y * HW + x] = 2);
+})();
+const shopCv = document.createElement("canvas"); shopCv.width = HW * T; shopCv.height = HH * T;
+(function(){
+  const c = shopCv.getContext("2d");
+  for (let y = 0; y < HH; y++) for (let x = 0; x < HW; x++) {
+    const X = x * T, Y = y * T, t = smap[y * HW + x];
+    if (t === 1) {
+      if (y < 2) { rect(c, "#7fc8bd", X, Y, T, T); if (y === 1) { rect(c, "#2f8f83", X, Y + 6, T, 10); rect(c, "#1f6f65", X, Y + 6, T, 1); } }
+      else if (y === 8) { rect(c, "#6b4423", X, Y, T, T); rect(c, "#7a5025", X, Y + 4, T, 1); }
+      else rect(c, "#6bb5a9", X, Y, T, T);
+    } else rect(c, (x + y) % 2 ? "#e8dcb8" : "#dccfa6", X, Y, T, T);
+  }
+  rect(c, "#2f8f83", 5 * T + 1, 8 * T + 2, 14, 12); rect(c, "#f3ecd8", 5 * T + 3, 8 * T + 4, 10, 1); rect(c, "#f3ecd8", 5 * T + 3, 8 * T + 13, 10, 1);
+  // biển hiệu
+  rect(c, "#f4c95d", 4 * T + 4, 4, 3 * T - 8, 14); rect(c, "#10241f", 4 * T + 7, 7, 3 * T - 14, 8);
+  rect(c, "#f4c95d", 4 * T + 10, 9, 4, 4); rect(c, "#f4c95d", 4 * T + 18, 10, 16, 1); rect(c, "#f4c95d", 4 * T + 18, 13, 11, 1);
+  // kệ hàng
+  [[1, 3], [7, 9]].forEach(([a, b]) => {
+    rect(c, "#6b4423", a * T, 2 * T, (b - a + 1) * T, T); rect(c, "#a0703c", a * T, 2 * T + 7, (b - a + 1) * T, 2);
+    for (let x = a; x <= b; x++) {
+      rect(c, "#c9a66b", x * T + 3, 2 * T + 1, 10, 6); rect(c, ["#f08a24", "#e8404f", "#f2a31b"][x % 3], x * T + 6, 2 * T + 3, 4, 3);
+      rect(c, "#5ec2e8", x * T + 4, 2 * T + 10, 8, 5); rect(c, "#8bd17c", x * T + 6, 2 * T + 9, 4, 1);
+    }
+  });
+  // quầy
+  for (let x = 1; x <= 9; x++) {
+    const X = x * T, Y = 4 * T;
+    rect(c, "#6b4423", X, Y + 6, T, 10); rect(c, "#a0703c", X, Y + 2, T, 5); rect(c, "#f3ecd8", X, Y + 3, T, 2);
+  }
+  [2, 4, 6, 8].forEach(x => { rect(c, "#c9a66b", x * T + 3, 4 * T - 4, 10, 7); rect(c, "#8bd17c", x * T + 6, 4 * T - 2, 4, 3); });
+  rect(c, "#f4c95d", 3 * T + 4, 4 * T, 3, 2); rect(c, "#f4c95d", 3 * T + 8, 4 * T + 1, 3, 1);
+  // thùng
+  [[1, 6], [9, 6]].forEach(([x, y]) => { rect(c, "#a0703c", x * T + 2, y * T + 3, 12, 12); rect(c, "#6b4423", x * T + 2, y * T + 6, 12, 1); rect(c, "#6b4423", x * T + 2, y * T + 11, 12, 1); });
+})();
+/* ===== Dữ liệu game + logic ===== */
+const CROPS = {
+  carrot: { n: "Cà rốt", t: 8,  c: "#f08a24", seed: "sd_carrot", item: "carrot", qty: 1 },
+  straw:  { n: "Dâu",    t: 12, c: "#e8404f", seed: "sd_straw",  item: "straw",  qty: 1 },
+  pump:   { n: "Bí ngô", t: 18, c: "#f2a31b", seed: "sd_pump",   item: "pump",   qty: 1 }
+};
+const ITEMS = {
+  sd_carrot: { n: "Hạt cà rốt", buy: 5 }, sd_straw: { n: "Hạt dâu", buy: 12 }, sd_pump: { n: "Hạt bí ngô", buy: 30 },
+  carrot: { n: "Cà rốt", sell: 15 }, straw: { n: "Dâu", sell: 32 }, pump: { n: "Bí ngô", sell: 75 },
+  f_roi: { n: "Cá rô", sell: 12 }, f_chep: { n: "Cá chép", sell: 28 }, f_hoi: { n: "Cá hồi", sell: 50 },
+  f_vang: { n: "Cá vàng", sell: 120 }, boot: { n: "Giày cũ", sell: 1 }
+};
+const FISH = [
+  { k: "f_roi", w: 46, z: 0.34, sp: 1.1 }, { k: "f_chep", w: 28, z: 0.26, sp: 1.4 },
+  { k: "f_hoi", w: 14, z: 0.2, sp: 1.8 }, { k: "f_vang", w: 4, z: 0.14, sp: 2.3 }, { k: "boot", w: 8, z: 1, sp: 0 }
+];
+const TOOLS = ["hoe", "water", "seed", "rod"], TOOLN = ["Cuốc", "Tưới", "Hạt", "Cần câu"];
+const SEEDS = ["carrot", "straw", "pump"];
+const SAVE_KEY = "vuoncau_save_v1";
+
+const S = {
+  gender: "boy", name: "Nông dân", coins: 30,
+  inv: { sd_carrot: 5, sd_straw: 0, sd_pump: 0, carrot: 0, straw: 0, pump: 0, f_roi: 0, f_chep: 0, f_hoi: 0, f_vang: 0, boot: 0 },
+  tilled: {}, crops: {}, tool: 0, seed: "carrot", px: 11 * T + 8, py: 10 * T, face: "down", day: 0.25, gift: 0, quest: 0, nq: {}, up: {}, pet: null, pfood: 0
+};
+const P = { moving: false, frame: 0, ft: 0 };
+const F = { st: "idle", t: 0, tx: 0, ty: 0, fish: null, mark: 0, dir: 1, a: 0, w: 0 };
+let playing = false, overlay = false, toastT = 0, inHome = false;
+const floats = [];
+
+function toast(msg){ const e = $("toast"); e.textContent = msg; e.classList.add("show"); toastT = 2.2; }
+function floatText(txt, x, y, col){ floats.push({ txt, x, y, col: col || "#fff", t: 1.1 }); }
+const faceVec = () => ({ up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] })[S.face];
+function targetTile(){
+  const v = faceVec();
+  return [Math.floor((S.px + v[0] * 11) / T), Math.floor((S.py - 4 + v[1] * 11) / T)];
+}
+const solidAt = (x, y) => inHome
+  ? [1, 2, 6].includes(hget(Math.floor(x / T), Math.floor(y / T)))
+  : SOLID.has(get(Math.floor(x / T), Math.floor(y / T)));
+function blocked(x, y){
+  if (!inHome) for (const n of VIL) if (n.on && x + 4 > n.x - 6 && x - 4 < n.x + 6 && y > n.y - 5 && y - 4 < n.y) return true;
+  if (inHome && x + 4 > NPC.x - 6 && x - 4 < NPC.x + 6 && y > NPC.y - 5 && y - 4 < NPC.y) return true;
+  return solidAt(x - 4, y) || solidAt(x + 4, y) || solidAt(x - 4, y - 4) || solidAt(x + 4, y - 4);
+}
+
+function movePlayer(ix, iy, dt){
+  P.moving = ix !== 0 || iy !== 0;
+  if (!P.moving) { P.frame = 0; return; }
+  if (F.st !== "idle" && F.st !== "mini") { F.st = "idle"; toast("Bạn đã thu cần câu"); }
+  const len = Math.hypot(ix, iy), sp = 58 * dt;
+  const dx = ix / len * sp, dy = iy / len * sp;
+  if (!blocked(S.px + dx, S.py)) S.px += dx;
+  if (!blocked(S.px, S.py + dy)) S.py += dy;
+  S.face = Math.abs(ix) > Math.abs(iy) ? (ix < 0 ? "left" : "right") : (iy < 0 ? "up" : "down");
+  P.ft += dt; if (P.ft > 0.18) { P.ft = 0; P.frame++; }
+}
+
+function growCrops(dt){
+  for (const k in S.crops) {
+    const c = S.crops[k], d = CROPS[c.t];
+    if (c.s < 3 && c.w) { c.p += dt * (S.up.can2 ? 1.3 : 1); if (c.p >= d.t) { c.s++; c.p = 0; c.w = false; } }
+  }
+}
+
+function pickFish(){
+  let tot = 0; FISH.forEach(f => tot += f.w);
+  let r = Math.random() * tot;
+  for (const f of FISH) { r -= f.w; if (r <= 0) return f; }
+  return FISH[0];
+}
+function catchFish(f){
+  S.inv[f.k]++; F.st = "idle"; $("fishUI").hidden = true; overlay = false;
+  const it = ITEMS[f.k];
+  toast(f.k === "boot" ? "Câu được một chiếc giày cũ..." : "Câu được " + it.n + "! (" + it.sell + " xu)");
+  floatText("+" + it.n, S.px, S.py - 24, "#8be0ff"); refreshHud();
+}
+function updateFishing(dt){
+  if (F.st === "wait") { F.t -= dt; if (F.t <= 0) { F.st = "bite"; F.t = 1.1; toast("Cá cắn câu! Bấm A!"); } }
+  else if (F.st === "bite") { F.t -= dt; if (F.t <= 0) { F.st = "idle"; toast("Cá đã chạy mất"); } }
+  else if (F.st === "mini") {
+    F.ft2 -= dt;
+    if (F.ft2 <= 0) { F.tg = Math.random(); F.ft2 = (0.5 + Math.random() * 0.9) / F.fish.sp; }
+    const dfp = F.tg - F.fp; F.fp += Math.sign(dfp) * Math.min(Math.abs(dfp), 0.3 * F.fish.sp * dt);
+    F.bv = Math.max(-0.9, Math.min(0.9, F.bv + (F.hold ? 2.6 : -2.6) * dt));
+    F.bp += F.bv * dt;
+    if (F.bp < 0) { F.bp = 0; F.bv = 0; } if (F.bp > 1 - F.bw) { F.bp = 1 - F.bw; F.bv = 0; }
+    F.prog += (F.fp >= F.bp && F.fp <= F.bp + F.bw ? 0.3 : -0.2) * dt;
+    $("zone").style.left = (F.bp * 100) + "%"; $("mark").style.left = "calc(" + (F.fp * 100) + "% - 3px)"; $("prog").style.width = (Math.max(0, Math.min(1, F.prog)) * 100) + "%";
+    if (F.prog >= 1) catchFish(F.fish);
+    else if (F.prog <= 0) { F.st = "idle"; $("fishUI").hidden = true; overlay = false; toast("Cá thoát mất!"); }
+  }
+}
+function fishAction(){
+  if (F.st === "wait") { F.st = "idle"; toast("Kéo sớm quá! Cá chưa cắn"); return true; }
+  if (F.st === "bite") {
+    const f = pickFish(); F.fish = f;
+    if (f.k === "boot") { catchFish(f); return true; }
+    F.st = "mini"; F.fp = 0.5; F.tg = 0.5; F.ft2 = 0.3; F.bw = 0.12 + f.z * 0.5 + (S.up.rod2 ? 0.1 : 0); F.bp = 0.5 - F.bw / 2; F.bv = 0; F.prog = 0.35;
+    $("zone").style.width = (F.bw * 100) + "%"; $("zone").style.left = (F.bp * 100) + "%"; $("mark").style.left = "calc(50% - 3px)"; $("prog").style.width = "35%";
+    $("fishUI").hidden = false; overlay = true; return true;
+  }
+  if (F.st === "mini") return true;
+  return false;
+}
+
+function act(){
+  if (dlg) { dlgNext(); return; }
+  if (!playing || overlay) { if (F.st === "mini") fishAction(); return; }
+  if (fishAction()) return;
+  if (inHome) { homeAct(); return; }
+  const vn = nearVillager(); if (vn) { talkVillager(vn); return; }
+  const [tx, ty] = targetTile(), id = ty * W + tx, type = get(tx, ty), tool = TOOLS[S.tool];
+  if (type === 10) { enterRoom("home"); return; }
+  if (type === 8 || type === 11) { enterRoom("shop"); return; }
+  const crop = S.crops[id];
+  if (crop && crop.s === 3) {
+    const d = CROPS[crop.t]; S.inv[d.item] += d.qty; delete S.crops[id];
+    toast("Thu hoạch " + d.n + "!"); floatText("+" + d.n, tx * T + 8, ty * T, "#ffe08a"); refreshHud(); return;
+  }
+  if (tool === "hoe") {
+    if (type === 4 && !S.tilled[id]) {
+      S.tilled[id] = 1; floatText("Cuốc", tx * T + 8, ty * T, "#d9a77a");
+      if (S.up.hoe2) { const v = faceVec(), x2 = tx + v[0], y2 = ty + v[1]; if (get(x2, y2) === 4 && !S.tilled[y2 * W + x2]) S.tilled[y2 * W + x2] = 1; }
+    }
+    else toast(type === 4 ? "Đất đã được cuốc rồi" : "Chỉ cuốc được đất trong vườn");
+  } else if (tool === "water") {
+    if (crop && !crop.w && crop.s < 3) { crop.w = true; floatText("Tưới", tx * T + 8, ty * T, "#8be0ff"); }
+    else toast(crop ? "Cây đã được tưới" : "Chưa có cây để tưới");
+  } else if (tool === "seed") {
+    const d = CROPS[S.seed];
+    if (!S.tilled[id]) toast("Hãy cuốc đất trước");
+    else if (crop) toast("Ô đất này đã có cây");
+    else if (S.inv[d.seed] <= 0) toast("Hết hạt " + d.n + ". Mua ở cửa hàng!");
+    else { S.inv[d.seed]--; S.crops[id] = { t: S.seed, s: 0, p: 0, w: false }; floatText("Gieo", tx * T + 8, ty * T, "#b8f08a"); refreshHud(); }
+  } else if (tool === "rod") {
+    if (type === 1) { F.st = "wait"; F.t = 2 + Math.random() * 3; F.tx = tx; F.ty = ty; toast("Đã thả câu. Chờ cá cắn..."); }
+    else toast("Đứng gần mặt nước rồi hướng về phía hồ");
+  }
+}
+
+/* ===== Cửa hàng ===== */
+function openShop(){ overlay = true; $("shop").hidden = false; renderShop(); }
+function closeShop(){ overlay = false; $("shop").hidden = true; }
+function renderShop(){
+  $("shopCoins").textContent = S.coins;
+  const buy = $("buyList"), sell = $("sellList"); buy.innerHTML = ""; sell.innerHTML = "";
+  Object.keys(ITEMS).forEach(k => {
+    const it = ITEMS[k], row = document.createElement("div"); row.className = "row";
+    if (it.buy) {
+      row.innerHTML = "<span>" + it.n + " (có " + S.inv[k] + ")</span>";
+      const b = document.createElement("button"); b.textContent = "Mua " + it.buy;
+      b.onclick = () => { if (S.coins >= it.buy) { S.coins -= it.buy; S.inv[k]++; refreshHud(); renderShop(); } else toast("Không đủ xu"); };
+      row.appendChild(b); buy.appendChild(row);
+    } else if (S.inv[k] > 0) {
+      row.innerHTML = "<span>" + it.n + " x" + S.inv[k] + "</span>";
+      const b = document.createElement("button"); b.textContent = "Bán " + it.sell * S.inv[k];
+      b.onclick = () => { S.coins += it.sell * S.inv[k]; S.inv[k] = 0; refreshHud(); renderShop(); };
+      row.appendChild(b); sell.appendChild(row);
+    }
+  });
+  if (!sell.children.length) sell.innerHTML = "<div class='row'><span>Chưa có gì để bán</span></div>";
+}
+function sellAll(){
+  Object.keys(ITEMS).forEach(k => { const it = ITEMS[k]; if (it.sell && S.inv[k] > 0) { S.coins += it.sell * S.inv[k]; S.inv[k] = 0; } });
+  refreshHud(); renderShop();
+}
+
+/* ===== Lưu / tải ===== */
+function save(){
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(inHome ? Object.assign({}, S, exitPos(), { face: "down" }) : S)); } catch (e) {}
+}
+function loadSave(){ try { const s = localStorage.getItem(SAVE_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+/* ===== NPC, hội thoại, vào/ra nhà ===== */
+const NPCS = { home: { x: 4 * T + 8, y: 3 * T + 14, name: "Bà Lan" }, shop: { x: 5 * T + 8, y: 3 * T + 14, name: "Chú Tư" } };
+let NPC = NPCS.home;
+const exitPos = () => room === "shop" ? { px: 21 * T + 8, py: 8 * T + 10 } : { px: 10 * T + 8, py: 8 * T + 10 };
+const TIPS = [
+  "Bí ngô lâu lớn nhưng bán được giá cao đấy cháu.",
+  "Nhớ tưới nước lại mỗi lần cây lớn thêm một bậc nhé.",
+  "Cá vàng hiếm lắm, ai câu được là may mắn cả năm.",
+  "Trời tối thì ra vườn khó nhìn lắm, cháu ngủ sớm đi."
+];
+let dlg = null, tipI = 0;
+function say(lines, after){ dlg = { lines, i: 0, after }; overlay = true; $("dlg").hidden = false; showLine(); }
+function showLine(){
+  $("dlgName").textContent = NPC.name; $("dlgText").textContent = dlg.lines[dlg.i];
+  $("dlgHint").textContent = dlg.i < dlg.lines.length - 1 ? "Bấm A để tiếp" : "Bấm A để đóng";
+}
+function dlgNext(){
+  dlg.i++;
+  if (dlg.i >= dlg.lines.length) { const a = dlg.after; dlg = null; overlay = false; $("dlg").hidden = true; if (a) a(); }
+  else showLine();
+}
+$("dlg").addEventListener("pointerdown", () => { if (dlg) dlgNext(); });
+
+function talkNpc(){
+  const n = S.name;
+  if (!S.gift) {
+    S.gift = 1;
+    say(["Ôi, chào " + n + "! Bà là Lan, hàng xóm của cháu đây.",
+      "Cháu cuốc đất trong vườn trước, rồi gieo hạt và nhớ tưới nước nhé.",
+      "Hồ phía đông nhiều cá lắm. Cứ ra cuối cầu gỗ mà thả câu.",
+      "Chúc cháu mùa màng bội thu!"]);
+    return;
+  }
+  if (S.quest === 0) { S.quest = 1; say(["Cháu à, bà đang thèm món canh cà rốt.", "Mang cho bà 3 củ cà rốt, bà trả 80 xu nhé."]); return; }
+  if (S.quest === 1) {
+    if (S.inv.carrot >= 3) {
+      S.quest = 2;
+      say(["Cà rốt tươi quá! Cảm ơn cháu nhiều.", "Đây, 80 xu của cháu."], () => { S.inv.carrot -= 3; S.coins += 80; refreshHud(); toast("Nhận 80 xu"); });
+    } else say(["Cháu mới có " + S.inv.carrot + " củ cà rốt thôi. Cần đủ 3 củ nhé."]);
+    return;
+  }
+  say([TIPS[tipI++ % TIPS.length]]);
+}
+function talkKeeper(){
+  say(["Chào " + S.name + "! Mời cháu xem hạt giống của chú.", "Chú cũng thu mua nông sản và cá nữa nhé."], openShop);
+}
+function homeAct(){
+  if (Math.hypot(S.px - NPC.x, S.py - NPC.y) < 28) { room === "shop" ? talkKeeper() : talkNpc(); return; }
+  const [tx, ty] = targetTile();
+  if (room === "home" && hget(tx, ty) === 6) { S.day = 0.25; save(); toast("Bạn ngủ một giấc ngon lành. Đã lưu game!"); }
+}
+function enterRoom(r){
+  F.st = "idle"; room = r; NPC = NPCS[r]; inHome = true; S.px = 5 * T + 8; S.py = 7 * T + 12; S.face = "up";
+  toast(r === "shop" ? "Bạn bước vào cửa hàng. Đến gần quầy nói chuyện với chú Tư!" : "Bạn bước vào nhà. Nói chuyện với bà Lan nhé!");
+}
+function exitHome(){ const p = exitPos(); inHome = false; S.px = p.px; S.py = p.py; S.face = "down"; }
+function drawKeeper(c, x, y){
+  rect(c, "rgba(0,0,0,.25)", x - 5, y - 1, 10, 2);
+  rect(c, "#3b3b4f", x - 3, y - 3, 3, 3); rect(c, "#3b3b4f", x + 1, y - 3, 3, 3);
+  rect(c, "#f3ecd8", x - 5, y - 9, 10, 7); rect(c, "#c0562b", x - 4, y - 8, 8, 6);
+  rect(c, "#f1c27d", x - 6, y - 8, 2, 4); rect(c, "#f1c27d", x + 4, y - 8, 2, 4);
+  rect(c, "#f1c27d", x - 4, y - 16, 8, 8);
+  rect(c, "#2f8f83", x - 5, y - 18, 10, 4); rect(c, "#2f8f83", x - 6, y - 15, 12, 1);
+  rect(c, "#2a1a10", x - 3, y - 12, 1, 2); rect(c, "#2a1a10", x + 2, y - 12, 1, 2); rect(c, "#6b4423", x - 3, y - 10, 6, 1);
+}
+
+function drawNpc(c, x, y){
+  rect(c, "rgba(0,0,0,.25)", x - 5, y - 1, 10, 2);
+  rect(c, "#6b4423", x - 3, y - 3, 3, 3); rect(c, "#6b4423", x + 1, y - 3, 3, 3);
+  rect(c, "#3d8f6b", x - 5, y - 9, 10, 7); rect(c, "#f3ecd8", x - 3, y - 8, 6, 5);
+  rect(c, "#f1c27d", x - 6, y - 8, 2, 4); rect(c, "#f1c27d", x + 4, y - 8, 2, 4);
+  rect(c, "#f1c27d", x - 4, y - 16, 8, 8);
+  rect(c, "#cfcfd6", x - 5, y - 17, 10, 3); rect(c, "#cfcfd6", x - 5, y - 15, 2, 4); rect(c, "#cfcfd6", x + 3, y - 15, 2, 4); rect(c, "#cfcfd6", x - 2, y - 20, 4, 3);
+  rect(c, "#2a1a10", x - 3, y - 12, 1, 2); rect(c, "#2a1a10", x + 2, y - 12, 1, 2); rect(c, "#e8647a", x - 1, y - 10, 2, 1);
+}
+/* ===== Dân làng đi lại ngoài trời ===== */
+function drawVillager(c, x, y, L, dir, frame){
+  const skin = "#f1c27d", sk2 = "#d9a45e", step = frame ? (frame % 2 ? 1 : -1) : 0, k = L.kid ? 1 : 0, hy = y - 16 + 2 * k, h = L.hair;
+  rect(c, "rgba(0,0,0,.25)", x - 5, y - 1, 10, 2);
+  rect(c, L.pants, x - 3 + step, y - 4 + k, 3, 4 - k); rect(c, L.pants, x + 1 - step, y - 4 + k, 3, 4 - k);
+  rect(c, L.shirt, x - 4, y - 9 + 2 * k, 8, 6 - k);
+  rect(c, skin, x - 6, y - 8 + 2 * k, 2, 4); rect(c, skin, x + 4, y - 8 + 2 * k, 2, 4);
+  rect(c, skin, x - 4, hy, 8, 8); rect(c, sk2, x - 4, hy + 7, 8, 1);
+  if (dir === "up") { rect(c, h, x - 5, hy - 1, 10, 9); if (L.long) rect(c, h, x - 5, hy + 8, 10, 4); }
+  else {
+    rect(c, h, x - 5, hy - 1, 10, 3); rect(c, h, x - 5, hy + 1, 2, 4); rect(c, h, x + 3, hy + 1, 2, 4);
+    if (L.long) { rect(c, h, x - 5, hy + 1, 2, 9); rect(c, h, x + 3, hy + 1, 2, 9); }
+    if (dir === "down") { rect(c, "#2a1a10", x - 3, hy + 4, 1, 2); rect(c, "#2a1a10", x + 2, hy + 4, 1, 2); }
+    else rect(c, "#2a1a10", dir === "left" ? x - 3 : x + 2, hy + 4, 1, 2);
+    if (L.beard) rect(c, L.beard, x - 3, hy + 6, 6, 2);
+  }
+  if (L.hat === "straw") { rect(c, "#e3cf8e", x - 8, hy, 16, 2); rect(c, "#d3be7c", x - 4, hy - 3, 8, 3); }
+  else if (L.hat === "cap") { rect(c, L.cap, x - 5, hy - 2, 10, 3); if (dir !== "up") rect(c, L.cap, x - 6, hy + 1, 12, 1); }
+  else if (L.hat === "flower") { rect(c, "#ff7aa8", x + 1, hy - 2, 4, 4); rect(c, "#fff27a", x + 2, hy - 1, 2, 2); }
+}
+const VIL = [
+  { id: "bay", name: "Ông Bảy", sx: 19, sy: 15, b: [18, 13, 21, 19], sp: 14, look: { shirt: "#7a5c3a", pants: "#4a3a2a", hair: "#cfcfd6", beard: "#e6e6ee", hat: "straw" } },
+  { id: "hoa", name: "Cô Hoa", sx: 9, sy: 24, b: [6, 22, 16, 26], sp: 16, look: { shirt: "#8f5fd0", pants: "#5a3a8a", hair: "#4a2a1c", long: 1, hat: "flower" } },
+  { id: "mit", name: "Bé Mít", sx: 15, sy: 11, b: [13, 9, 19, 13], sp: 28, look: { shirt: "#f2a31b", pants: "#3d7be0", hair: "#2a1a10", kid: 1, hat: "cap", cap: "#e8404f" } },
+  { id: "buu", name: "Anh Bưu", sx: 14, sy: 8, b: [10, 8, 22, 9], sp: 20, look: { shirt: "#2f8f83", pants: "#2d4a8a", hair: "#3b2a1c", hat: "cap", cap: "#2f8f83" } },
+  { id: "mer", name: "Thương nhân", sx: 20, sy: 11, b: [20, 11, 21, 12], sp: 0, win: [10 / 24, 16 / 24], look: { shirt: "#6a3fa0", pants: "#3a2a5a", hair: "#2a1a10", beard: "#9a9aa8", hat: "cap", cap: "#f4c95d" } }
+];
+const asleep = () => S.day > 0.83 || S.day < 0.15;
+const npcBlocked = (x, y) => [[x - 4, y], [x + 4, y], [x - 4, y - 4], [x + 4, y - 4]].some(p => SOLID.has(get(Math.floor(p[0] / T), Math.floor(p[1] / T))));
+function spawnNpc(n){
+  let best = null, bd = 1e9;
+  for (let ty = n.b[1]; ty <= n.b[3]; ty++) for (let tx = n.b[0]; tx <= n.b[2]; tx++) {
+    const x = tx * T + 8, y = ty * T + 12; if (npcBlocked(x, y)) continue;
+    const d = Math.hypot(tx - n.sx, ty - n.sy); if (d < bd) { bd = d; best = [x, y]; }
+  }
+  if (best) { n.x = best[0]; n.y = best[1]; }
+}
+VIL.forEach(n => { n.dir = "down"; n.fr = 0; n.ft = 0; n.mode = "idle"; n.t = Math.random() * 2; n.vx = n.vy = 0; n.x = n.y = 0; n.on = false; });
+function updateVillagers(dt){
+  const sl = asleep();
+  for (const n of VIL) {
+    const gone = sl || (n.win && (S.day < n.win[0] || S.day >= n.win[1]));
+    if (gone) { if (n.on && n.win && playing) { toast(n.name + " đã rời làng"); if (!$("mshop").hidden) closeMShop(); } n.on = false; continue; }
+    if (!n.on) { spawnNpc(n); if (!inHome && Math.hypot(S.px - n.x, S.py - n.y) < 16) continue; n.on = true; n.mode = "idle"; n.t = 1; if (n.win && playing) toast(n.name + " đã đến làng!"); }
+    if (dlg && NPC === n) {
+      const dx = S.px - n.x, dy = S.py - n.y; n.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down"); n.fr = 0; continue;
+    }
+    if (overlay || inHome) { n.fr = 0; continue; }
+    if (!n.sp) { n.fr = 0; continue; }
+    n.t -= dt;
+    if (n.mode === "idle") {
+      n.fr = 0;
+      if (n.t <= 0) {
+        const d = [[1, 0], [-1, 0], [0, 1], [0, -1]][(Math.random() * 4) | 0];
+        n.vx = d[0]; n.vy = d[1]; n.mode = "walk"; n.t = 0.6 + Math.random() * 1.6;
+        n.dir = d[0] < 0 ? "left" : d[0] > 0 ? "right" : d[1] < 0 ? "up" : "down";
+      }
+      continue;
+    }
+    const nx = n.x + n.vx * n.sp * dt, ny = n.y + n.vy * n.sp * dt, tx = Math.floor(nx / T), ty = Math.floor(ny / T);
+    const ok = tx >= n.b[0] && tx <= n.b[2] && ty >= n.b[1] && ty <= n.b[3] && !npcBlocked(nx, ny) && !(Math.abs(nx - S.px) < 11 && Math.abs(ny - S.py) < 8);
+    if (ok && n.t > 0) { n.x = nx; n.y = ny; n.ft += dt; if (n.ft > 0.2) { n.ft = 0; n.fr++; } }
+    else { n.mode = "idle"; n.t = 1 + Math.random() * 3; }
+  }
+}
+function nearVillager(){
+  const v = faceVec(); let best = null, bd = 26;
+  for (const n of VIL) {
+    if (!n.on) continue;
+    const dx = n.x - S.px, dy = n.y - S.py, d = Math.hypot(dx, dy);
+    if (d < bd && dx * v[0] + dy * v[1] > -4) { best = n; bd = d; }
+  }
+  return best;
+}
+const VTIPS = {
+  bay: ["Cá càng quý thì vùng xanh càng hẹp và vạch chạy càng nhanh.", "Kéo cần sớm quá là cá sợ chạy mất đấy cháu.", "Thỉnh thoảng câu trúng cả giày cũ. Chuyện thường thôi."],
+  hoa: ["Cây chỉ lớn thêm khi được tưới. Mỗi lần lên một bậc là phải tưới lại.", "Bí ngô lớn chậm nhưng bán được giá nhất vườn.", "Nhớ cuốc đất trước rồi mới gieo hạt nhé."],
+  mit: ["Mình thấy cá vàng trong hồ rồi. Nó lấp lánh lắm!", "Bà Lan nấu canh ngon nhất làng.", "Đừng giẫm lên luống rau của cô Hoa nha!", "Tối là mình phải về nhà ngủ đó."],
+  buu: ["Cửa hàng chú Tư thu mua cả cá lẫn nông sản đấy.", "Bà Lan hay nhờ người mang đồ, cháu ghé thăm bà nhé.", "Anh đi dọc con đường này mỗi ngày."]
+};
+let vtipI = 0;
+function talkVillager(n){
+  NPC = n; const nm = S.name, q = S.nq || (S.nq = {}), st = q[n.id] || 0, inv = S.inv;
+  const dx = S.px - n.x, dy = S.py - n.y; n.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
+  const tip = () => say([VTIPS[n.id][vtipI++ % VTIPS[n.id].length]]);
+  const pay = (take, key, cnt, coins, next, msg, extra) => () => { inv[key] -= cnt; S.coins += coins; if (extra) extra(); q[n.id] = next; refreshHud(); toast(msg); };
+  if (n.id === "mer") { say(["Chào " + nm + "! Ta là thương nhân rong, mỗi ngày chỉ ghé làng từ 10:00 đến 16:00.", "Ta bán dụng cụ tốt và cả thú cưng. Xem thử nhé!"], openMShop); return; }
+  if (n.id === "bay") {
+    if (st === 0) say(["Chà, có người mới đến à? Ông là Bảy, câu cá ở đây ba chục năm rồi.", "Cháu đứng gần mặt nước, hướng về hồ rồi bấm A. Cá cắn thì bấm lại thật nhanh.", "Câu được 2 con cá chép mang cho ông, ông trả 120 xu."], () => { q.bay = 1; });
+    else if (st === 1) inv.f_chep >= 2 ? say(["Cá chép béo thật! Đây, 120 xu của cháu."], pay(0, "f_chep", 2, 120, 2, "Nhận 120 xu")) : say(["Cháu mới có " + inv.f_chep + " con cá chép. Cần đủ 2 con nhé."]);
+    else if (st === 2) say(["Cháu khá lắm. Ông muốn nếm lại cá hồi một lần.", "Câu được 1 con cá hồi, ông trả 200 xu."], () => { q.bay = 3; });
+    else if (st === 3) inv.f_hoi >= 1 ? say(["Cá hồi đây rồi! Cảm ơn cháu. 200 xu của cháu đây."], pay(0, "f_hoi", 1, 200, 4, "Nhận 200 xu")) : say(["Cá hồi khó câu lắm, cứ kiên nhẫn nhé cháu."]);
+    else tip();
+  } else if (n.id === "hoa") {
+    if (st === 0) say(["Chào " + nm + "! Cô là Hoa, cô chăm vườn rau phía nam.", "Cô cần dâu để làm mứt. Mang cho cô 3 quả dâu, cô trả 150 xu."], () => { q.hoa = 1; });
+    else if (st === 1) inv.straw >= 3 ? say(["Dâu chín mọng quá! Đây, phần thưởng của cháu."], pay(0, "straw", 3, 150, 2, "Nhận 150 xu")) : say(["Cháu mới có " + inv.straw + " quả dâu. Cần đủ 3 quả nhé."]);
+    else tip();
+  } else if (n.id === "mit") {
+    if (st === 0) say(["Ê, " + nm + "! Mình là Mít.", "Mình hay chạy quanh đây chơi. Bạn cần gì cứ hỏi nhé!"], () => { q.mit = 1; });
+    else tip();
+  } else {
+    const h = S.day * 24, greet = h < 11 ? "Chào buổi sáng" : h < 17 ? "Chào buổi chiều" : "Chào buổi tối";
+    if (st === 0) say(["Chào " + nm + "! Anh là Bưu, chuyên đi đưa thư quanh làng.", "Có việc gì cần nhắn thì cứ nói với anh nhé."], () => { q.buu = 1; });
+    else say([greet + " " + nm + "! Hôm nay chưa có thư mới đâu.", VTIPS.buu[vtipI++ % VTIPS.buu.length]]);
+  }
+}
+/* ===== Thương nhân + thú cưng ===== */
+const MERCH = [
+  { id: "rod2", n: "Cần câu tốt", d: "thanh trắng rộng hơn khi câu", p: 250, k: "up" },
+  { id: "can2", n: "Bình tưới sắt", d: "cây lớn nhanh hơn 30%", p: 180, k: "up" },
+  { id: "hoe2", n: "Cuốc sắt", d: "mỗi lần cuốc được 2 ô", p: 150, k: "up" },
+  { id: "pfood", n: "Thức ăn thú x5", d: "cho thú cưng ăn", p: 30, k: "food" },
+  { id: "dog", n: "Chó con", d: "thú cưng", p: 300, k: "pet", pn: "Cún" },
+  { id: "cat", n: "Mèo con", d: "thú cưng", p: 250, k: "pet", pn: "Mèo" },
+  { id: "chick", n: "Gà con", d: "thú cưng", p: 150, k: "pet", pn: "Gà" }
+];
+function openMShop(){ overlay = true; $("mshop").hidden = false; renderMShop(); }
+function closeMShop(){ overlay = false; $("mshop").hidden = true; }
+function renderMShop(){
+  $("mshopCoins").textContent = S.coins; const box = $("mList"); box.innerHTML = "";
+  MERCH.forEach(m => {
+    const row = document.createElement("div"); row.className = "row"; const sp = document.createElement("span");
+    sp.textContent = m.n + " (" + m.d + ")"; row.appendChild(sp);
+    const own = m.k === "up" ? S.up[m.id] : (m.k === "pet" && S.pet);
+    const b = document.createElement("button"); b.textContent = own ? (m.k === "pet" ? "Có thú rồi" : "Đã có") : "Mua " + m.p; b.disabled = !!own; b.onclick = () => buyM(m);
+    row.appendChild(b); box.appendChild(row);
+  });
+}
+function buyM(m){
+  if (S.coins < m.p) { toast("Không đủ xu"); return; }
+  if (m.k === "up") S.up[m.id] = 1;
+  else if (m.k === "food") { if (!S.pet) { toast("Bạn chưa có thú cưng"); return; } S.pfood += 5; }
+  else { if (S.pet) { toast("Bạn đã có thú cưng"); return; } S.pet = { t: m.id, name: m.pn, exp: 0, hu: 80, pt: 0 }; PET.init = false; }
+  S.coins -= m.p; toast("Đã mua " + m.n); refreshHud(); renderMShop();
+}
+const PETN = { dog: "Chó", cat: "Mèo", chick: "Gà" }, STN = ["con", "lớn", "trưởng thành"];
+const petStage = p => p.exp < 40 ? 0 : p.exp < 120 ? 1 : 2;
+const PET = { x: 0, y: 0, fx: 1, fr: 0, ft: 0, init: false };
+const FOODS = { pfood: [30, 5, "Thức ăn thú"], carrot: [15, 3], straw: [20, 5], pump: [35, 8], f_roi: [25, 6], f_chep: [35, 9], f_hoi: [45, 12], f_vang: [60, 20] };
+const foodCount = k => k === "pfood" ? S.pfood : S.inv[k];
+function growMsg(p, before){ if (petStage(p) > before) toast(p.name + " đã lớn thành " + PETN[p.t] + " " + STN[petStage(p)] + "!"); }
+function feedPet(k){
+  const p = S.pet, f = FOODS[k]; if (!p || foodCount(k) <= 0) return;
+  if (p.hu >= 95) { toast(p.name + " no rồi!"); return; }
+  if (k === "pfood") S.pfood--; else S.inv[k]--;
+  const before = petStage(p); p.hu = Math.min(100, p.hu + f[0]); p.exp += f[1];
+  toast(p.name + " ăn ngon lành! +" + f[1] + " kinh nghiệm"); growMsg(p, before); refreshHud(); renderBag();
+}
+function petPet(){
+  const p = S.pet; if (!p) return;
+  if (p.hu < 20) { toast(p.name + " đang đói, hãy cho ăn trước nhé"); return; }
+  const now = Date.now(); if (now - (p.pt || 0) < 15000) { toast(p.name + " vừa được vuốt ve, đợi chút nhé"); return; }
+  p.pt = now; const before = petStage(p); p.exp += 2; toast("Bạn vuốt ve " + p.name + ". +2 kinh nghiệm"); growMsg(p, before); renderBag();
+}
+function updatePet(dt){
+  const p = S.pet; if (!p) return;
+  p.hu = Math.max(0, p.hu - dt * 0.4);
+  if (!playing || inHome) { PET.init = false; return; }
+  if (!PET.init) { PET.x = S.px - 12; PET.y = S.py; PET.init = true; }
+  const dx = S.px - PET.x, dy = S.py - PET.y, d = Math.hypot(dx, dy);
+  if (d > 140) { PET.x = S.px; PET.y = S.py; return; }
+  if (overlay) { PET.fr = 0; return; }
+  if (d > 18) {
+    const sp = 56 * dt, mx = dx / d * sp, my = dy / d * sp; let moved = false;
+    if (!npcBlocked(PET.x + mx, PET.y)) { PET.x += mx; moved = true; }
+    if (!npcBlocked(PET.x, PET.y + my)) { PET.y += my; moved = true; }
+    if (Math.abs(dx) > 1) PET.fx = dx > 0 ? 1 : -1;
+    if (moved) { PET.ft += dt; if (PET.ft > 0.18) { PET.ft = 0; PET.fr++; } }
+  } else PET.fr = 0;
+}
+function drawPet(c, x, y, p, fx, fr){
+  const st = petStage(p), b = fr % 2 ? 1 : 0, C = { dog: ["#c98b4e", "#7a4a22"], cat: ["#9a9aa6", "#5e5e6c"], chick: ["#ffd84a", "#f2a31b"] }[p.t];
+  rect(c, "rgba(0,0,0,.25)", x - 6 - st, y - 1, 12 + 2 * st, 2);
+  if (p.t === "chick") {
+    const s = 5 + 2 * st, hs = s >> 1;
+    rect(c, C[0], x - hs, y - s - b, s, s); rect(c, C[1], x + (fx > 0 ? hs : -hs - 2), y - hs - b - 1, 2, 2);
+    rect(c, "#2a1a10", x + (fx > 0 ? 1 : -2), y - s + 1 - b, 1, 1 + (st > 1 ? 1 : 0));
+    rect(c, C[1], x - 1, y - 1, 1, 1); rect(c, C[1], x + 1, y - 1, 1, 1);
+    if (st === 2) rect(c, "#e8404f", x - 1, y - s - 2 - b, 2, 2);
+    return;
+  }
+  const w = 6 + 2 * st, h = 3 + st, hs = 4 + st, hw = w >> 1, hx = fx > 0 ? x + hw - 1 : x - hw - hs + 1, hy = y - 2 - h - hs + 2 - b;
+  rect(c, C[1], x - hw + 1 + b, y - 2, 1, 2); rect(c, C[1], x + hw - 2 - b, y - 2, 1, 2);
+  rect(c, C[0], x - hw, y - 2 - h - b, w, h);
+  const tx = fx > 0 ? x - hw - 2 : x + hw;
+  if (p.t === "cat") rect(c, C[1], tx, y - 2 - h - 3 - b, 2, 4); else rect(c, C[1], tx, y - 2 - h - 1 - b, 2, 1);
+  rect(c, C[0], hx, hy, hs, hs);
+  if (p.t === "dog") rect(c, C[1], hx + (fx > 0 ? hs - 1 : 0), hy + 1, 1, 3);
+  else { rect(c, C[0], hx, hy - 1, 1, 1); rect(c, C[0], hx + hs - 1, hy - 1, 1, 1); }
+  rect(c, "#2a1a10", fx > 0 ? hx + hs - 2 : hx + 1, hy + 1, 1, 1); rect(c, "#2a1a10", fx > 0 ? hx + hs - 1 : hx, hy + hs - 2, 1, 1);
+}
+/* ===== Lệnh admin ===== */
+const ADMH = "xu <n> · do <mã> <n> · hat · ca · thu <dog|cat|chick> · kn <n> · no · gio <0-24> · caylon · tuoi · dat · nangcap\nMã đồ: sd_carrot sd_straw sd_pump carrot straw pump f_roi f_chep f_hoi f_vang boot pfood";
+function openAdm(){ if (!playing || overlay) return; if (net.on && !net.admin) { toast("Cần quyền admin. Gõ /login <mã> trong chat"); return; } overlay = true; $("adm").hidden = false; $("admIn").focus(); }
+function closeAdm(){ overlay = false; $("adm").hidden = true; $("admIn").blur(); }
+function admRun(txt){
+  const a = txt.trim().replace(/^\//, "").split(/\s+/), c = (a[0] || "").toLowerCase(), v = parseFloat(a[1]);
+  let r = "Lệnh không hợp lệ. Gõ help.";
+  if (c === "help" || c === "") r = ADMH;
+  else if (c === "xu" && !isNaN(v)) { S.coins = Math.max(0, S.coins + Math.round(v)); r = "Xu: " + S.coins; }
+  else if (c === "do" && a[1]) {
+    const k = a[1], q = parseInt(a[2]) || 1;
+    if (k === "pfood") { S.pfood = Math.max(0, S.pfood + q); r = "Thức ăn thú: " + S.pfood; }
+    else if (k in S.inv) { S.inv[k] = Math.max(0, S.inv[k] + q); r = k + ": " + S.inv[k]; }
+    else r = "Không có mã đồ: " + k;
+  }
+  else if (c === "hat") { SEEDS.forEach(s => S.inv[CROPS[s].seed] += 10); r = "+10 mỗi loại hạt"; }
+  else if (c === "ca") { ["f_roi", "f_chep", "f_hoi", "f_vang"].forEach(k => S.inv[k] += 5); r = "+5 mỗi loại cá"; }
+  else if (c === "thu" && PETN[a[1]]) { S.pet = { t: a[1], name: { dog: "Cún", cat: "Mèo", chick: "Gà" }[a[1]], exp: 0, hu: 100, pt: 0 }; PET.init = false; r = "Đã nhận thú cưng: " + PETN[a[1]]; }
+  else if (c === "kn" && S.pet && !isNaN(v)) { S.pet.exp = Math.max(0, S.pet.exp + Math.round(v)); r = S.pet.name + ": KN " + S.pet.exp + " (" + STN[petStage(S.pet)] + ")"; }
+  else if (c === "no" && S.pet) { S.pet.hu = 100; r = S.pet.name + " đã no"; }
+  else if (c === "gio" && !isNaN(v)) { if (net.on) { netSend({ t: "gio", v }); r = "Đã gửi lệnh đổi giờ cho server."; } else { S.day = (((v % 24) + 24) % 24) / 24; r = "Giờ: " + clockText(); } }
+  else if (c === "caylon") { for (const k in S.crops) { const o = S.crops[k]; o.s = 3; o.p = 0; o.w = false; } r = "Mọi cây đã chín"; }
+  else if (c === "tuoi") { for (const k in S.crops) if (S.crops[k].s < 3) S.crops[k].w = true; r = "Đã tưới mọi cây"; }
+  else if (c === "dat") { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (map[y * W + x] === 4) S.tilled[y * W + x] = 1; r = "Đã cuốc toàn bộ đất vườn"; }
+  else if (c === "nangcap") { MERCH.forEach(m => { if (m.k === "up") S.up[m.id] = 1; }); r = "Đã có toàn bộ nâng cấp"; }
+  refreshHud(); $("admOut").textContent = r; return r;
+}
+const chatLines = [];
+function chatPush(t, col){ chatLines.push([t, col]); if (chatLines.length > 40) chatLines.shift(); renderChat(); }
+function renderChat(){
+  const b = $("chatLog"); b.innerHTML = "";
+  chatLines.slice(-8).forEach(l => { const d = document.createElement("div"); d.textContent = l[0]; d.style.color = l[1] || "var(--text)"; d.style.whiteSpace = "pre-wrap"; b.appendChild(d); });
+  b.scrollTop = b.scrollHeight;
+}
+function openChat(pre){
+  if (!playing || overlay) return; overlay = true; $("chat").hidden = false;
+  if (!chatLines.length) chatPush("Gõ /help để xem danh sách lệnh.", "#8be0ff");
+  const i = $("chatIn"); i.value = pre || ""; renderChat(); i.focus();
+}
+function closeChat(){ overlay = false; $("chat").hidden = true; $("chatIn").blur(); }
+function chatSend(){
+  const i = $("chatIn"), t = i.value.trim(); i.value = ""; if (!t) return;
+  if (t[0] === "/") {
+    chatPush("> " + t, "#f4c95d"); const c = t.slice(1).trim().split(/\s+/)[0].toLowerCase();
+    if (c === "login") { if (net.on) netSend({ t: "login", k: t.slice(1).trim().slice(5).trim() }); else chatPush("Đang chơi offline, không cần mã.", "#8be0ff"); }
+    else if (c === "who") chatPush(net.on ? "Đang online: " + [S.name].concat(Object.values(net.players).map(p => p.n)).join(", ") : "Đang chơi offline.", "#8bd17c");
+    else if (net.on && !net.admin && c !== "help" && c !== "") chatPush("Cần quyền admin. Gõ /login <mã>", "#e8647a");
+    else chatPush(admRun(t), "#8bd17c");
+  } else { chatPush(S.name + ": " + t); floatText(t.slice(0, 24), S.px, S.py - 24, "#fff"); netSend({ t: "chat", m: t }); }
+}
+/* ===== Online (nhiều người chơi) ===== */
+const net = { on: false, ws: null, id: 0, players: {}, day0: 0, t0: 0, admin: false, st: 0, tries: 0, ever: false };
+function netSend(o){ if (net.on) try { net.ws.send(JSON.stringify(o)); } catch (e) {} }
+function feedPush(t, col){
+  const f = $("feed"), d = document.createElement("div"); d.textContent = t; d.style.color = col || "var(--text)"; f.appendChild(d);
+  while (f.children.length > 5) f.removeChild(f.firstChild);
+  setTimeout(() => d.remove(), 9000);
+}
+function netConnect(){
+  if (!/^https?:$/.test(location.protocol) || net.ws) return;
+  let ws; try { ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws"); } catch (e) { return; }
+  net.ws = ws;
+  ws.onopen = () => { net.on = true; net.ever = true; net.tries = 0; netSend({ t: "hello", n: S.name, g: S.gender }); };
+  ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } netMsg(m); };
+  ws.onclose = () => {
+    net.on = false; net.ws = null; net.players = {}; net.admin = false; $("online").hidden = true;
+    if (playing && net.tries++ < (net.ever ? 30 : 3)) setTimeout(netConnect, 3000);
+  };
+  ws.onerror = () => {};
+}
+function netMsg(m){
+  if (m.t === "welcome") { net.id = m.id; net.admin = false; chatPush("Đã vào làng online. Gõ /who xem ai đang chơi.", "#8be0ff"); }
+  else if (m.t === "day") { net.day0 = m.d; net.t0 = performance.now(); }
+  else if (m.t === "players") {
+    const seen = {};
+    m.p.forEach(p => {
+      if (p.id === net.id) return; seen[p.id] = 1; const o = net.players[p.id];
+      if (o) Object.assign(o, p, { x: o.x, y: o.y, tx: p.x, ty: p.y }); else net.players[p.id] = Object.assign(p, { tx: p.x, ty: p.y });
+    });
+    Object.keys(net.players).forEach(k => { if (!seen[k]) delete net.players[k]; });
+    $("online").hidden = false; $("online").textContent = "Online " + (Object.keys(net.players).length + 1);
+  }
+  else if (m.t === "chat") { const p = net.players[m.id]; chatPush(m.n + ": " + m.m); feedPush(m.n + ": " + m.m); if (p) { p.say = m.m; p.sayT = 5; } }
+  else if (m.t === "sys") { chatPush(m.m, "#8be0ff"); feedPush(m.m, "#8be0ff"); }
+  else if (m.t === "login") { net.admin = !!m.ok; chatPush(m.ok ? "Đã mở khóa quyền admin." : "Sai mã admin.", m.ok ? "#8bd17c" : "#e8647a"); }
+}
+function netTick(dt){
+  for (const k in net.players) {
+    const o = net.players[k]; o.x += (o.tx - o.x) * Math.min(1, dt * 12); o.y += (o.ty - o.y) * Math.min(1, dt * 12);
+    if (o.sayT > 0) o.sayT -= dt;
+  }
+  if (!net.on) return;
+  if (net.t0) S.day = (net.day0 + (performance.now() - net.t0) / 300000) % 1;
+  net.st += dt;
+  if (playing && net.st > 0.1) { net.st = 0; netSend({ t: "pos", x: Math.round(S.px), y: Math.round(S.py), f: S.face, m: P.moving ? P.frame : 0, r: inHome ? room : "out" }); }
+}
+const drawRemote = p => { drawChar(ctx, Math.round(p.x - camX), Math.round(p.y - camY), p.g, p.f, p.m); label(p.n, p.x - camX, p.y - camY - 22, "#8bd17c"); if (p.sayT > 0) label(p.say, p.x - camX, p.y - camY - 32, "#fff"); };
+function renderHome(t){
+  const pw = HW * T, ph = HH * T;
+  camX = cw >= pw ? -Math.floor((cw - pw) / 2) : Math.round(Math.max(0, Math.min(pw - cw, S.px - cw / 2)));
+  camY = ch >= ph ? -Math.floor((ch - ph) / 2) - 16 : Math.round(Math.max(0, Math.min(ph - ch, S.py - ch / 2)));
+  rect(ctx, "#10241f", 0, 0, cw, ch);
+  ctx.drawImage(room === "shop" ? shopCv : homeCv, -camX, -camY);
+  const list = [
+    { y: NPC.y, d: () => (room === "shop" ? drawKeeper : drawNpc)(ctx, NPC.x - camX, Math.round(NPC.y - camY + Math.sin(t / 500) * 0.6)) },
+    { y: S.py, d: () => drawChar(ctx, Math.round(S.px - camX), Math.round(S.py - camY), S.gender, S.face, P.moving ? P.frame : 0) }
+  ].concat(Object.values(net.players).filter(p => p.r === room).map(p => ({ y: p.y, d: () => drawRemote(p) }))).sort((a, b) => a.y - b.y);
+  list.forEach(o => o.d());
+  if (!dlg && !overlay && Math.hypot(S.px - NPC.x, S.py - NPC.y) < 28) label(room === "shop" ? "A: mua bán" : "A: nói chuyện", NPC.x - camX, NPC.y - camY - 24, "#f4c95d");
+  for (const f of floats) label(f.txt, f.x - camX, f.y - camY - (1.1 - f.t) * 14, f.col);
+}
+/* ===== Giao diện, điều khiển, vòng lặp ===== */
+const cv = $("c"), ctx = cv.getContext("2d");
+let cw = 160, ch = 240, camX = 0, camY = 0, T0 = 0;
+function resize(){
+  const Z = innerWidth < 520 ? 3 : 4;
+  cw = Math.ceil(innerWidth / Z); ch = Math.ceil(innerHeight / Z);
+  cv.width = cw; cv.height = ch; ctx.imageSmoothingEnabled = false;
+}
+addEventListener("resize", resize); resize();
+
+const ICONS = {
+  hoe: ["......aa", ".....aaa", "....bb.a", "...bb...", "..bb....", ".bb.....", "bb......", "b......."],
+  water: ["........", "..cccc.c", ".cddddcc", "cdddddc.", "cdddddc.", ".cddddc.", "..cccc..", "........"],
+  seed: ["...bb...", "..bbbb..", ".aaaaaa.", ".aaggaa.", ".aaggaa.", ".aaaaaa.", ".aaaaaa.", "..aaaa.."],
+  rod: ["......bb", ".....b.w", "....b..w", "...b...w", "..b....w", ".b.....w", "b....rr.", "b.....r."]
+};
+const IPAL = { a: "#c9a66b", b: "#a0703c", c: "#3d7be0", d: "#5ec2e8", g: "#8bd17c", r: "#e8404f", w: "#f3ecd8" };
+function icon(name){
+  const c = document.createElement("canvas"); c.width = 8; c.height = 8; const g = c.getContext("2d");
+  ICONS[name].forEach((row, y) => [...row].forEach((ch2, x) => { if (ch2 !== ".") { g.fillStyle = name === "hoe" && ch2 === "a" ? "#c0c8d0" : IPAL[ch2]; g.fillRect(x, y, 1, 1); } }));
+  return c;
+}
+const toolEls = [];
+TOOLS.forEach((k, i) => {
+  const b = document.createElement("button"); b.className = "tool";
+  b.appendChild(icon(k)); const s = document.createElement("span"); s.textContent = TOOLN[i]; b.appendChild(s);
+  const n = document.createElement("b"); b.appendChild(n); b.onclick = () => selectTool(i);
+  $("tools").appendChild(b); toolEls.push(b);
+});
+function selectTool(i){
+  if (i === 2 && S.tool === 2) { S.seed = SEEDS[(SEEDS.indexOf(S.seed) + 1) % 3]; toast("Hạt: " + CROPS[S.seed].n); }
+  S.tool = i; refreshHud();
+}
+function refreshHud(){
+  $("coins").textContent = S.coins + " xu";
+  const i = S.inv, fish = i.f_roi + i.f_chep + i.f_hoi + i.f_vang;
+  $("stock").textContent = "Cà rốt " + i.carrot + " · Dâu " + i.straw + " · Bí " + i.pump + " · Cá " + fish;
+  toolEls.forEach((b, k) => { b.classList.toggle("on", k === S.tool); b.setAttribute("aria-pressed", k === S.tool); });
+  toolEls[2].querySelector("span").textContent = CROPS[S.seed].n;
+  toolEls[2].querySelector("b").textContent = S.inv[CROPS[S.seed].seed];
+}
+function clockText(){
+  const m = Math.floor(S.day * 1440), h = Math.floor(m / 60) % 24, mi = m % 60;
+  return String(h).padStart(2, "0") + ":" + String(mi).padStart(2, "0");
+}
+
+/* ----- Điều khiển ----- */
+const keys = {}; let jx = 0, jy = 0, jid = null;
+addEventListener("keydown", e => {
+  const k = e.key.toLowerCase(); keys[k] = true;
+  if (!playing || (e.target && e.target.tagName === "INPUT")) { if (playing && k === "escape") { if (!$("adm").hidden) closeAdm(); if (!$("chat").hidden) closeChat(); } return; }
+  if (k === " " || k === "e" || k === "enter") { e.preventDefault(); F.hold = true; act(); }
+  if (k === "i") { $("bag").hidden ? openBag() : closeBag(); }
+  if (k === "`") openAdm();
+  if (k === "t" || k === "/") { e.preventDefault(); openChat(k === "/" ? "/" : ""); }
+  if (k >= "1" && k <= "4") selectTool(+k - 1);
+  if (k === "escape" && !$("shop").hidden) closeShop();
+  if (k === "escape" && !$("bag").hidden) closeBag();
+  if (k === "escape" && !$("mshop").hidden) closeMShop();
+});
+addEventListener("keyup", e => { const k = e.key.toLowerCase(); keys[k] = false; if (k === " " || k === "e" || k === "enter") F.hold = false; });
+const joy = $("joy"), knob = $("knob");
+function joyMove(e){
+  const r = joy.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  let dx = e.clientX - cx, dy = e.clientY - cy; const m = 44, l = Math.hypot(dx, dy);
+  if (l > m) { dx = dx / l * m; dy = dy / l * m; }
+  knob.style.transform = "translate(" + dx + "px," + dy + "px)";
+  jx = Math.abs(dx) > 8 ? dx / m : 0; jy = Math.abs(dy) > 8 ? dy / m : 0;
+}
+joy.addEventListener("pointerdown", e => { jid = e.pointerId; joy.setPointerCapture(jid); joyMove(e); });
+joy.addEventListener("pointermove", e => { if (e.pointerId === jid) joyMove(e); });
+const joyEnd = e => { if (e.pointerId === jid) { jid = null; jx = jy = 0; knob.style.transform = ""; } };
+joy.addEventListener("pointerup", joyEnd); joy.addEventListener("pointercancel", joyEnd);
+$("act").addEventListener("pointerdown", e => { e.preventDefault(); F.hold = true; act(); });
+["pointerup", "pointercancel", "blur"].forEach(ev => addEventListener(ev, () => { F.hold = false; }));
+$("shopX").onclick = closeShop; $("sellAll").onclick = sellAll;
+const BAG = [["Hạt giống", ["sd_carrot", "sd_straw", "sd_pump"]], ["Nông sản", ["carrot", "straw", "pump"]], ["Cá", ["f_roi", "f_chep", "f_hoi", "f_vang"]], ["Khác", ["boot"]]];
+function renderBag(){
+  $("bagCoins").textContent = S.coins;
+  const box = $("bagList"); box.innerHTML = ""; let any = false;
+  const eq = (row, on, onTxt, fn) => { const b = document.createElement("button"); b.textContent = on ? onTxt : "Trang bị"; b.disabled = on; if (!on) b.onclick = fn; row.appendChild(b); };
+  const th = document.createElement("h3"); th.textContent = "Dụng cụ"; box.appendChild(th);
+  TOOLS.forEach((t, i) => {
+    const row = document.createElement("div"); row.className = "row"; const nm = document.createElement("span"); nm.textContent = i === 2 ? "Hạt giống" : TOOLN[i]; row.appendChild(nm);
+    eq(row, S.tool === i, "Đang cầm", () => { S.tool = i; refreshHud(); renderBag(); toast("Đã cầm: " + (i === 2 ? "Hạt " + CROPS[S.seed].n : TOOLN[i])); }); box.appendChild(row);
+  });
+  if (S.pet) {
+    const p = S.pet, ph = document.createElement("h3"); ph.textContent = "Thú cưng"; box.appendChild(ph);
+    const r1 = document.createElement("div"); r1.className = "row"; const s1 = document.createElement("span");
+    s1.textContent = p.name + " (" + PETN[p.t] + " " + STN[petStage(p)] + ") · No " + Math.round(p.hu) + "% · KN " + p.exp; r1.appendChild(s1);
+    const bt = document.createElement("button"); bt.textContent = "Vuốt ve"; bt.onclick = petPet; r1.appendChild(bt); box.appendChild(r1);
+    Object.keys(FOODS).filter(k => foodCount(k) > 0).forEach(k => {
+      const r = document.createElement("div"); r.className = "row"; const s = document.createElement("span"); s.textContent = (FOODS[k][2] || ITEMS[k].n) + " x" + foodCount(k); r.appendChild(s);
+      const b = document.createElement("button"); b.textContent = "Cho ăn"; b.onclick = () => feedPet(k); r.appendChild(b); box.appendChild(r);
+    });
+  }
+  const upn = Object.keys(S.up).filter(k => S.up[k]).map(k => MERCH.find(m => m.id === k).n);
+  if (upn.length) { const uh = document.createElement("h3"); uh.textContent = "Nâng cấp"; box.appendChild(uh); const up = document.createElement("p"); up.className = "sub"; up.textContent = upn.join(", "); box.appendChild(up); }
+  BAG.forEach(g => {
+    const have = g[1].filter(k => S.inv[k] > 0); if (!have.length) return; any = true;
+    const h = document.createElement("h3"); h.textContent = g[0]; box.appendChild(h);
+    have.forEach(k => {
+      const row = document.createElement("div"); row.className = "row";
+      const nm = document.createElement("span"); nm.textContent = ITEMS[k].n; const ct = document.createElement("b"); ct.textContent = "x" + S.inv[k];
+      row.appendChild(nm); row.appendChild(ct);
+      const sk = SEEDS.find(s => CROPS[s].seed === k);
+      if (sk) eq(row, S.seed === sk, "Đang chọn", () => { S.seed = sk; S.tool = 2; refreshHud(); renderBag(); toast("Trang bị: Hạt " + CROPS[sk].n); });
+      box.appendChild(row);
+    });
+  });
+  if (!any) { const p = document.createElement("p"); p.className = "sub"; p.textContent = "Túi đồ đang trống."; box.appendChild(p); }
+}
+function openBag(){ if (!playing || overlay) return; overlay = true; $("bag").hidden = false; renderBag(); }
+function closeBag(){ overlay = false; $("bag").hidden = true; }
+$("bagBtn").onclick = openBag; $("bagX").onclick = closeBag; $("mshopX").onclick = closeMShop;
+$("admX").onclick = closeAdm;
+$("chatBtn").onclick = () => openChat(""); $("chatX").onclick = closeChat; $("chatGo").onclick = chatSend;
+$("chatIn").addEventListener("keydown", e => { if (e.key === "Enter") chatSend(); });
+const admGo = () => { admRun($("admIn").value); $("admIn").value = ""; };
+$("admGo").onclick = admGo; $("admIn").addEventListener("keydown", e => { if (e.key === "Enter") admGo(); });
+let clkN = 0, clkT = 0;
+$("clock").onclick = () => { const n = Date.now(); clkN = n - clkT < 1500 ? clkN + 1 : 1; clkT = n; if (clkN >= 5) { clkN = 0; openAdm(); } };
+
+/* ----- Menu chọn nhân vật ----- */
+function preview(id, g){
+  const c = $(id).getContext("2d"); c.imageSmoothingEnabled = false; c.clearRect(0, 0, 20, 24); drawChar(c, 10, 22, g, "down", 0);
+}
+preview("pvBoy", "boy"); preview("pvGirl", "girl");
+document.querySelectorAll(".char").forEach(b => b.onclick = () => {
+  S.gender = b.dataset.g;
+  document.querySelectorAll(".char").forEach(o => { const on = o === b; o.classList.toggle("sel", on); o.setAttribute("aria-pressed", on); });
+});
+function startGame(){
+  $("menu").hidden = true; ["hud", "joy", "act"].forEach(id => $(id).hidden = false);
+  playing = true; refreshHud(); netConnect(); toast("Chào " + S.name + "! Cuốc đất, gieo hạt rồi nhớ tưới nước.");
+}
+$("go").onclick = () => { S.name = $("nm").value.trim() || "Nông dân"; startGame(); };
+const old = loadSave();
+if (old) { $("cont").hidden = false; $("cont").onclick = () => { Object.assign(S, old, { inv: Object.assign({}, S.inv, old.inv) }); startGame(); }; }
+
+/* ----- Vẽ ----- */
+function drawCrop(c, x, y){
+  const d = CROPS[c.t], g = "#3f9f45", g2 = "#2f7d3c";
+  if (c.s === 0) { rect(ctx, g, x + 7, y + 9, 2, 3); }
+  else if (c.s === 1) { rect(ctx, g, x + 7, y + 6, 2, 6); rect(ctx, g2, x + 5, y + 6, 2, 2); rect(ctx, g2, x + 9, y + 7, 2, 2); }
+  else if (c.s === 2) { rect(ctx, g2, x + 4, y + 5, 8, 7); rect(ctx, g, x + 5, y + 4, 6, 6); }
+  else if (c.t === "carrot") { rect(ctx, g, x + 5, y + 3, 6, 5); rect(ctx, d.c, x + 6, y + 8, 4, 4); rect(ctx, d.c, x + 7, y + 12, 2, 2); }
+  else if (c.t === "straw") { rect(ctx, g2, x + 3, y + 4, 10, 8); rect(ctx, d.c, x + 4, y + 6, 3, 3); rect(ctx, d.c, x + 9, y + 5, 3, 3); rect(ctx, d.c, x + 7, y + 9, 3, 3); }
+  else { rect(ctx, g, x + 7, y + 2, 2, 3); rect(ctx, d.c, x + 3, y + 5, 10, 8); rect(ctx, "#d78512", x + 7, y + 5, 2, 8); }
+  if (c.s < 3 && !c.w) { rect(ctx, "#8be0ff", x + 13, y + 1, 2, 2); }
+}
+function label(txt, x, y, col){
+  ctx.font = "11px VT323, monospace"; ctx.textAlign = "center"; ctx.fillStyle = "#0a1712"; ctx.fillText(txt, x + 1, y + 1); ctx.fillStyle = col; ctx.fillText(txt, x, y);
+}
+function render(t){
+  if (inHome && playing) { renderHome(t); return; }
+  if (playing) {
+    camX = Math.max(0, Math.min(W * T - cw, S.px - cw / 2)); camY = Math.max(0, Math.min(H * T - ch, S.py - ch / 2 - 10));
+  } else { camX = 150 + Math.sin(t * 0.00012) * 70; camY = 100 + Math.cos(t * 0.00009) * 40; }
+  camX = Math.round(camX); camY = Math.round(camY);
+  rect(ctx, "#10241f", 0, 0, cw, ch);
+  ctx.drawImage(world, -camX, -camY);
+  const x0 = Math.max(0, Math.floor(camX / T)), x1 = Math.min(W - 1, Math.floor((camX + cw) / T));
+  const y0 = Math.max(0, Math.floor(camY / T)), y1 = Math.min(H - 1, Math.floor((camY + ch) / T));
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    if (map[y * W + x] !== 1) continue;
+    const o = Math.floor(t / 400 + x * 3 + y * 5) % 8;
+    rect(ctx, "#7ccdf5", x * T - camX + o + 1, y * T - camY + 4 + (x % 3) * 3, 4, 1);
+    rect(ctx, "#2f78b8", x * T - camX + 8 - (o >> 1), y * T - camY + 11, 3, 1);
+  }
+  for (const k in S.tilled) {
+    const id = +k, x = id % W, y = (id / W) | 0; if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+    const c = S.crops[id], px = x * T - camX, py = y * T - camY;
+    rect(ctx, c && c.w ? "#4a2e1d" : "#5e3b27", px + 1, py + 1, 14, 14);
+    rect(ctx, "#4a2e1d", px + 2, py + 5, 12, 1); rect(ctx, "#4a2e1d", px + 2, py + 10, 12, 1);
+    if (c) drawCrop(c, px, py);
+  }
+  if (F.st !== "idle" && F.st !== "mini") {
+    const bx = F.tx * T + 8 - camX, by = F.ty * T + 8 - camY + (F.st === "bite" ? Math.sin(t / 40) * 2 : Math.sin(t / 400));
+    ctx.strokeStyle = "#f3ecd8"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(S.px - camX, S.py - 14 - camY); ctx.lineTo(bx, by); ctx.stroke();
+    rect(ctx, "#e8404f", bx - 2, by - 2, 4, 2); rect(ctx, "#f3ecd8", bx - 2, by, 4, 2);
+    if (F.st === "bite") label("!", bx, by - 6, "#f4c95d");
+  }
+  const ents = VIL.filter(n => n.on).map(n => ({ y: n.y, d: () => drawVillager(ctx, Math.round(n.x - camX), Math.round(n.y - camY), n.look, n.dir, n.mode === "walk" ? n.fr : 0) }));
+  if (playing) ents.push({ y: S.py, d: () => drawChar(ctx, Math.round(S.px - camX), Math.round(S.py - camY), S.gender, S.face, P.moving ? P.frame : 0) });
+  else ents.push({ y: 10 * T, d: () => drawChar(ctx, 11 * T + 8 - camX, 10 * T - camY, "boy", "down", 0) });
+  if (S.pet && playing && PET.init) ents.push({ y: PET.y, d: () => drawPet(ctx, Math.round(PET.x - camX), Math.round(PET.y - camY), S.pet, PET.fx, PET.fr) });
+  Object.values(net.players).filter(p => p.r === "out").forEach(p => ents.push({ y: p.y, d: () => drawRemote(p) }));
+  ents.sort((a, b) => a.y - b.y).forEach(o => o.d());
+  const night = Math.max(0, -Math.cos((S.day - 0.5) * Math.PI * 2) - 0.2) * 0.5;
+  if (night > 0.01) { ctx.fillStyle = "rgba(15,20,70," + night.toFixed(2) + ")"; ctx.fillRect(0, 0, cw, ch); }
+  if (S.pet && playing && PET.init && S.pet.hu < 20) label("Đói!", PET.x - camX, PET.y - camY - 16, "#e8647a");
+  if (playing && !dlg && !overlay) { const vn = nearVillager(); if (vn) label("A: " + vn.name, vn.x - camX, vn.y - camY - 24, "#f4c95d"); }
+  for (const f of floats) label(f.txt, f.x - camX, f.y - camY - (1.1 - f.t) * 14, f.col);
+}
+function frame(t){
+  const dt = Math.min(0.05, (t - T0) / 1000 || 0); T0 = t;
+  if (playing) {
+    let ix = jx, iy = jy;
+    if (keys.arrowleft || keys.a) ix = -1; if (keys.arrowright || keys.d) ix = 1;
+    if (keys.arrowup || keys.w) iy = -1; if (keys.arrowdown || keys.s) iy = 1;
+    if (!overlay) movePlayer(ix, iy, dt); else P.moving = false;
+    if (inHome && S.py >= 8 * T) exitHome();
+    growCrops(dt); updateFishing(dt); S.day = (S.day + dt / 300) % 1;
+    $("clock").textContent = clockText();
+    for (let i = floats.length - 1; i >= 0; i--) { floats[i].t -= dt; if (floats[i].t <= 0) floats.splice(i, 1); }
+  }
+  updateVillagers(dt); updatePet(dt); netTick(dt);
+  if (toastT > 0) { toastT -= dt; if (toastT <= 0) $("toast").classList.remove("show"); }
+  render(t); requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+setInterval(() => { if (playing) save(); }, 10000);
+</script>
+
+</body></html>
